@@ -14,6 +14,9 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
   <style>
     :root {
       --bg: #F8FAFC;         
@@ -50,15 +53,21 @@
       padding: 24px; 
     }
 
+    /* 修改 .shell 布局为三列仪表盘 */
+    /* 修改 .shell 布局，强制三列并排 */
     .shell { 
-      width: min(1200px, 100%); 
+      width: 100%; 
+      max-width: 100%; /* 彻底放开最大宽度限制，充分利用全屏 */
       display: grid; 
-      grid-template-columns: 280px 1fr; 
-      gap: 24px; 
+      /* 强制三列：左侧边栏250px | 中间聊天室占 1 份比例 | 右侧面板占 1.2 份比例 */
+      grid-template-columns: 250px 1fr 1.2fr; 
+      gap: 20px; 
+      height: 95vh; /* 稍微加高，让视觉更舒展 */
     }
 
-    @media (max-width: 980px){ 
-      .shell { grid-template-columns: 1fr; } 
+    /* 将折叠断点极限缩小，现在只有在手机或很小的平板上它才会掉到下面去 */
+    @media (max-width: 900px){ 
+      .shell { display: flex; flex-direction: column; height: auto; } 
     }
 
     .sidebar { display: flex; flex-direction: column; gap: 16px; max-height: 85vh; overflow-y: auto; padding-right: 4px; }
@@ -166,9 +175,32 @@
     .tab-btn:hover { background: var(--bg); color: #111827; }
     .tab-btn.active { background: #111827; color: #ffffff; }
 
-    .view-container { flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative; }
-    .view { display: none; flex-direction: column; flex: 1; min-height: 0; background: #ffffff; }
-    .view.active { display: flex; }
+    /* --- 核心容器修改 --- */
+    .main { display: flex; flex-direction: column; height: 100%; box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); background: #ffffff; border: 1px solid var(--border); overflow: hidden;}
+    
+    .right-panel { display: flex; flex-direction: column; gap: 24px; height: 100%; min-width: 0; }
+    
+    /* 地图 Block */
+    .map-block { flex: 1; background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); overflow: hidden; position: relative; min-height: 250px; }
+    
+    /* Evidence & Reference 混合 Block */
+    .er-block { flex: 1.5; display: flex; flex-direction: column; background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); overflow: hidden; min-height: 0; }
+    
+    /* 混合 Block 内部的 Tab 导航 */
+    .er-tabs { display: flex; border-bottom: 1px solid var(--border); background: #F8FAFC; }
+    .er-tab-btn { flex: 1; padding: 12px; font-size: 13px; font-weight: 600; color: var(--muted); background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+    .er-tab-btn:hover { color: #111827; background: #F1F5F9; }
+    .er-tab-btn.active { color: #111827; border-bottom-color: #111827; background: #ffffff; }
+
+    /* 内部视图内容区 */
+    .er-content { flex: 1; overflow-y: auto; background: #F8FAFC; position: relative; }
+    .er-view { display: none; height: 100%; width: 100%; } 
+    .er-view.active { display: block; }
+
+    #reference-view { padding: 24px; } /* 只有 Reference 文字页需要内边距 */
+
+    /* 让 Evidence 里的卡片适应右侧栏的宽度 */
+    .e-node { width: 100%; max-width: 100%; }
 
     .jump-map-btn {
       display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
@@ -243,6 +275,54 @@
     
     .tree-divider { font-size: 24px; color: #CBD5E1; margin: 20px 0; font-weight: bold; }
     .empty-node { color: #9CA3AF; font-size: 13px; border: 1px dashed #CBD5E1; padding: 20px 40px; border-radius: 8px; }
+
+    /* =========================================
+       🕸️ 知识图谱 (Graph Network) 专属样式
+       ========================================= */
+    /* 1. 放动画布高度，让它尽可能填满右侧空间 */
+    #graph-view {
+      padding: 0 !important;
+      position: relative; /* 确立绝对定位的参考系 */
+      overflow: hidden;   /* 锁死边界，绝不允许内容撑破容器 */
+    }
+
+    #evidence-network {
+      /* ✅ 核心修复 2：绝对定位大法。把它死死地钉在父容器的四个角，随外部容器自动伸缩 */
+      position: absolute; 
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100%;
+      height: 100%;
+      outline: none;
+      background: #F8FAFC;
+    }
+    
+    /* 覆盖 vis-network 默认的简陋 tooltip 样式 */
+    div.vis-tooltip {
+      position: absolute; background-color: #1E293B; color: #F8FAFC;
+      border-radius: 8px; padding: 8px 12px; font-family: var(--sans);
+      font-size: 12px; font-weight: 600; box-shadow: var(--shadow-md);
+      pointer-events: none; white-space: nowrap;
+    }
+
+    /* 点击后弹出的详情浮动面板 (保持不变) */
+    #node-detail-panel {
+      position: absolute;
+      bottom: 24px; right: 24px;
+      width: 360px; max-height: 500px; overflow-y: auto;
+      background: #ffffff; border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+      display: none; z-index: 100; transition: all 0.2s ease;
+    }
+    .close-detail-btn {
+      position: absolute; top: 12px; right: 12px;
+      background: #F1F5F9; border: none; width: 24px; height: 24px;
+      border-radius: 50%; font-size: 14px; cursor: pointer;
+      color: #64748B; display: flex; align-items: center; justify-content: center;
+    }
+    .close-detail-btn:hover { background: #E2E8F0; color: #0F172A; }
+    #node-detail-panel .e-node { width: 100%; box-shadow: none; border: none; padding: 20px; border-radius: 0; }
+
   </style>
 </head>
 
@@ -263,11 +343,11 @@
         <div class="info-section">
           <h3>Search Configuration</h3>
           <div class="filter-group">
-            <label class="group-title">🔍 Search Mode</label>
+            <label class="group-title">Search Mode</label>
             <div class="sidebar-mode-selector">
-              <label><input type="radio" name="search_mode" value="comprehensive" checked> <span>✨ Comprehensive</span></label>
-              <label><input type="radio" name="search_mode" value="policy"> <span>📖 Policy</span></label>
-              <label><input type="radio" name="search_mode" value="application"> <span>🏛️ Application</span></label>
+              <label><input type="radio" name="search_mode" value="comprehensive" checked> <span>Comprehensive</span></label>
+              <label><input type="radio" name="search_mode" value="policy"> <span>Policy</span></label>
+              <label><input type="radio" name="search_mode" value="application"> <span>Application</span></label>
             </div>
           </div>
           <div class="filter-group">
@@ -276,11 +356,11 @@
             <datalist id="postcode-options"></datalist>
             
             <button id="directMapBtn" style="width: 100%; margin-top: 8px; background: #E0E7FF; color: #4338CA; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.2s;">
-              🗺️ Show all nearby on Map
+              Show all nearby on Map
             </button>
           </div>
           <div class="filter-group" style="margin-bottom: 0;">
-            <label class="group-title">📊 Fetch Count</label>
+            <label class="group-title">Fetch Count</label>
             <div class="slider-row">
               <input type="range" id="nearbyCount" min="1" max="10" value="3" oninput="document.getElementById('nearbyVal').innerText=this.value">
               <span class="val-display" id="nearbyVal">3</span>
@@ -293,13 +373,13 @@
         <div class="info-section">
           <h3>Global Filters</h3>
           <div class="filter-group">
-            <label class="group-title">🕒 Date Range</label>
+            <label class="group-title">Date Range</label>
             <div class="date-row"><span>From</span><input type="text" id="dateFrom" placeholder="Select start date..."></div>
             <div class="date-row"><span>To</span><input type="text" id="dateTo" placeholder="Select end date..."></div>
             <div style="text-align: right; margin-top: 6px;"><a href="#" style="font-size: 11px; color: var(--accent); text-decoration: none; font-weight: 500;" onclick="document.getElementById('dateFrom').value=''; document.getElementById('dateTo').value=''; return false;">Clear Dates</a></div>
           </div>
           <div class="filter-group" style="margin-bottom: 0;">
-            <label class="group-title">📏 Max Distance</label>
+            <label class="group-title">Max Distance</label>
             <select id="distanceFilter">
               <option value="all">No Limit (Find nearest)</option>
               <option value="0.2">Within 0.2 Miles</option>
@@ -312,82 +392,62 @@
       </div>
     </div>
 
-    <div class="card main">
+    <div class="main">
       <div class="toolbar">
-        <div class="tabs" id="mainTabs">
-          <button class="tab-btn active" data-target="chat-view">💬 Chat</button>
-          <button class="tab-btn" data-target="map-view">🗺️ Map</button>
-          <button class="tab-btn" data-target="graph-view">🕸️ Evidence</button>
-          <button class="tab-btn" data-target="reference-view">📖 References</button> </div>
+        <div style="font-weight: 700; color: #0F172A; font-size: 15px; padding-left: 8px;">Chat Assistant</div>
         <div class="actions">
           <button id="clearBtn" title="Start a new conversation">New Chat</button>
           <button id="logoutBtn">Sign out</button>
         </div>
       </div>
 
-      <div class="view-container">
+      <div class="chat" id="chat"></div>
+      
+      <div class="composer-container">
+        <div class="composer">
+          <textarea id="msg" placeholder="Ask about a property, postcode, or council policy..."></textarea>
+          <button class="send" id="sendBtn" title="Send message">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+        <div class="statusText" id="statusText">AI can make mistakes. Verify important planning information.</div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      
+      <div class="map-block">
+        <div id="global-map" class="full-map"></div>
+      </div>
+
+      <div class="er-block">
+        <div class="er-tabs">
+          <button class="er-tab-btn active" data-target="graph-view">Evidence Tree</button>
+          <button class="er-tab-btn" data-target="reference-view">Source References</button>
+        </div>
         
-        <div id="chat-view" class="view active">
-          <div id="chat" class="chat"></div>
-          <div class="composer-container">
-            <div class="composer">
-              <textarea id="msg" placeholder="Ask about a property, postcode, or council policy..."></textarea>
-              <button class="send" id="sendBtn" title="Send message">
-                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-              </button>
+        <div class="er-content">
+          <!-- Evidence 页面 (已升级为动态知识图谱) -->
+          <div id="graph-view" class="er-view active" style="padding: 0; position: relative;">
+            
+            <div id="evidence-network"><div class="empty-node" style="text-align: center; margin-top: 40px;">Waiting for reasoning graph...</div></div>
+            
+            <!-- ✅ 新增：点击节点时显示的悬浮卡片容器 -->
+            <div id="node-detail-panel">
+              <button class="close-detail-btn" onclick="document.getElementById('node-detail-panel').style.display='none'">✕</button>
+              <div id="node-detail-content"></div>
             </div>
-            <div class="statusText" id="statusText">AI can make mistakes. Verify important planning information.</div>
+            
           </div>
-        </div>
 
-        <div id="reference-view" class="view" style="background: #F8FAFC; overflow-y: auto;">
-          <button class="back-to-chat-btn" onclick="switchTab('chat-view')">← Back to Chat</button>
-          <div style="max-width: 800px; margin: 40px auto; padding: 40px; background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
-            <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-top: 0; margin-bottom: 24px; border-bottom: 2px solid #E2E8F0; padding-bottom: 12px;">📖 Source Document References</h2>
-            <div id="reference-content" style="line-height: 2; font-size: 14.5px; color: #334155;">
-              <div class="empty-node" style="text-align: center; padding: 20px;">Waiting for document verification...</div>
-            </div>
-          </div>
-        </div>
-
-        <div id="map-view" class="view">
-          <div id="global-map" class="full-map"></div>
-          <button class="back-to-chat-btn" onclick="switchTab('chat-view')">← Back to Chat</button>
-        </div>
-
-        <div id="graph-view" class="view">
-          <button class="back-to-chat-btn" onclick="switchTab('chat-view')">← Back to Chat</button>
-          
-          <div class="evidence-tree" id="evidenceTree">
-            <div class="tree-tier">
-              <div class="tier-title">📖 Policy Evidence</div>
-              <div class="node-row" id="policy-nodes">
-                <div class="empty-node">Waiting for policy extraction...</div>
-              </div>
-            </div>
-            
-            <div class="tree-divider">↓</div>
-            
-            <div class="tree-tier">
-              <div class="tier-title">🏛️ Precedent Cases</div>
-              <div class="node-row" id="case-nodes">
-                <div class="empty-node">Waiting for case analysis...</div>
-              </div>
-            </div>
-            
-            <div class="tree-divider">↓</div>
-            
-            <div class="tree-tier">
-              <div class="tier-title">👑 Synthesis & Conclusion</div>
-              <div class="node-row">
-                <div class="e-node conclusion" id="conclusion-node">
-                  <div style="color: #9CA3AF; text-align: center; padding: 20px;">Chief Consultant is analyzing...</div>
-                </div>
+          <div id="reference-view" class="er-view">
+            <div style="background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-sm);">
+              <div id="reference-content" style="line-height: 2; font-size: 13.5px; color: #334155;">
+                <div class="empty-node" style="text-align: center; padding: 20px;">Waiting for document verification...</div>
               </div>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -460,6 +520,119 @@
       return sharedMapboxMap;
     }
 
+    let network = null;
+
+    // ✅ 解析大模型文本并转化为 Nodes (节点) 和 Edges (连线)
+    function buildGraphData(policyText, caseText) {
+      let nodes = [];
+      let edges = [];
+      let nodeId = 1;
+
+      // 1. 创建中心节点 (Chief Analysis)
+      nodes.push({ 
+        id: 0, 
+        label: 'Target\nAnalysis', 
+        shape: 'circle', 
+        color: { background: '#0F172A', border: '#0F172A' },
+        font: { color: 'white', face: 'var(--sans)', multi: 'html', bold: true },
+        size: 25,
+        title: "Chief Consultant (Target Analysis)"
+      });
+
+      // 内部解析器
+      function parseToNodes(text, groupType, colorHex) {
+        if (!text || text.trim() === "") return;
+        let chunks = text.split(/(?=### )/g);
+        if (chunks.length <= 1) { chunks = text.split(/\n\n+/); }
+
+        chunks.forEach(c => {
+          let clean = c.trim().replace(/###\s*(?:\[\d+\])+\s*(?:Type:\s*[^|]+\|\s*Council:\s*[^|]+\|\s*(?:Source|Doc|Doc Name|App ID):\s*)?/ig, '### ');
+          clean = clean.replace(/\[\d+(?:,\s*\d+)*\]/g, '').replace(/\]\s+\(/g, '](').replace(/\[\[(.*?)\]\]/g, '[$1]');
+          clean = clean.replace(/(\b\d{2,4})_(\d{3,5})_([A-Z0-9]+\b)/ig, '$1/$2/$3');
+
+          if (clean.length > 20) {
+            // 提取简短的标题作为节点标签 (Label)
+            let titleMatch = clean.match(/###\s*(.*)/);
+            let rawTitle = titleMatch ? titleMatch[1].replace(/\[|\]|\(http.*?\)/g, '') : `${groupType} Detail`;
+            let shortLabel = rawTitle.length > 15 ? rawTitle.substring(0, 15) + '...' : rawTitle;
+
+            // 压入节点
+            nodes.push({
+              id: nodeId,
+              label: shortLabel,
+              title: shortLabel, // 鼠标悬停只显示简短名称
+              shape: 'dot',
+              size: 15,
+              color: { background: colorHex, border: '#ffffff', hover: { background: colorHex, border: '#000000' } },
+              font: { face: 'var(--sans)' },
+              // ✅ 把清洗好的原始 Markdown 文本存起来，留给点击时渲染
+              markdownText: clean, 
+              nodeType: groupType // 记录一下是 Policy 还是 Case，方便上色
+            });
+
+            // 压入连线 (连接到中心节点)
+            edges.push({ from: 0, to: nodeId, color: '#CBD5E1', width: 2, length: 150 });
+            nodeId++;
+          }
+        });
+      }
+
+      // 2. 解析 Policy 生成蓝色节点，解析 Case 生成绿色节点
+      parseToNodes(policyText, 'Policy', '#3B82F6');
+      parseToNodes(caseText, 'Case', '#10B981');
+
+      return { nodes, edges };
+    }
+
+    // ✅ 渲染图谱
+    function renderNetwork(data) {
+      const container = document.getElementById('evidence-network');
+      
+      const options = {
+        interaction: { hover: true, tooltipDelay: 200 },
+        physics: {
+          solver: 'forceAtlas2Based', // 类似引力和排斥力的经典物理引擎
+          forceAtlas2Based: { gravitationalConstant: -60, centralGravity: 0.01, springLength: 150, springConstant: 0.08 }
+        },
+        nodes: { borderWidth: 2, shadow: true }
+      };
+
+      if (network) { network.destroy(); }
+      network = new vis.Network(container, data, options);
+
+      // ✅ 新增：监听节点的点击事件
+      network.on("click", function (params) {
+        const panel = document.getElementById('node-detail-panel');
+        const content = document.getElementById('node-detail-content');
+
+        if (params.nodes.length > 0) {
+          const clickedNodeId = params.nodes[0];
+          // 排除中心节点 (ID 为 0)
+          if (clickedNodeId === 0) {
+            panel.style.display = 'none';
+            return;
+          }
+
+          // 找出被点击的节点数据
+          const clickedNode = data.nodes.find(n => n.id === clickedNodeId);
+          if (clickedNode && clickedNode.markdownText) {
+            
+            // 动态决定卡片顶部的颜色条：Policy 是蓝色，Case 是绿色
+            const typeClass = clickedNode.nodeType === 'Policy' ? 'policy' : 'case';
+            
+            // 将存好的 Markdown 文本渲染为我们熟悉的 e-node 卡片
+            content.innerHTML = `<div class="e-node ${typeClass}">${marked.parse(clickedNode.markdownText)}</div>`;
+            
+            // 显示面板
+            panel.style.display = 'block';
+          }
+        } else {
+          // 如果点击了空白处，隐藏面板
+          panel.style.display = 'none';
+        }
+      });
+    }
+
     function splitIntoNodes(text, type) {
       if (!text || text.trim() === "") return [];
       
@@ -504,19 +677,42 @@
       }
     }
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => switchTab(e.target.dataset.target));
+    // ✅ 局部 Evidence / Reference 切换逻辑
+    // ✅ 局部 Evidence / Reference 切换逻辑
+    document.querySelectorAll('.er-tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const targetId = e.target.dataset.target;
+        
+        // 按钮高亮切换
+        document.querySelectorAll('.er-tab-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        // 面板显示切换
+        document.querySelectorAll('.er-view').forEach(view => {
+          if (view.id === targetId) view.classList.add('active');
+          else view.classList.remove('active');
+        });
+
+        // ✅ 新增：如果切回到图谱页面，强制刷新画布居中，防止因为隐藏状态下错位
+        if (targetId === 'graph-view' && network) {
+          setTimeout(() => { 
+            network.fit(); 
+          }, 50); 
+        }
+      });
     });
 
     // ==========================================
     // 🕸️ 推理过程大图 (Reasoning Graph) 控制逻辑
     // ==========================================
     function resetGraph() {
-      document.getElementById('policy-nodes').innerHTML = '<div class="empty-node">Waiting for policy extraction...</div>';
-      document.getElementById('case-nodes').innerHTML = '<div class="empty-node">Waiting for case analysis...</div>';
-      document.getElementById('conclusion-node').innerHTML = '<div style="color: #9CA3AF; text-align: center; padding: 20px;">Chief Consultant is analyzing...</div>';
+      if (network) { network.destroy(); network = null; }
+      document.getElementById('evidence-network').innerHTML = '<div class="empty-node" style="text-align: center; margin-top: 40px;">Waiting for reasoning graph...</div>';
       
-      // ✅ 每次提问前，重置独立的文献引用页为等待状态
+      // ✅ 隐藏详情弹窗
+      const panel = document.getElementById('node-detail-panel');
+      if (panel) panel.style.display = 'none';
+
       document.getElementById('reference-content').innerHTML = '<div class="empty-node" style="text-align: center; padding: 20px;">Waiting for document verification...</div>';
     }
 
@@ -717,36 +913,34 @@
         
             // 1. 接收到主模型打字 (更新底部的 Conclusion 节点)
             // 1. 接收到主模型打字
+            // 1. 接收到主模型打字
             if(evt.type === "delta"){
               if (!deltaStarted) {
                 deltaStarted = true;
                 const activeStep = bubble.querySelector('.agent-steps .step.active');
                 if (activeStep) { updateAgentStatus(bubble, "", true); }
-                document.getElementById('conclusion-node').innerHTML = ""; 
+                // ❌ 删掉这行：document.getElementById('conclusion-node').innerHTML = ""; 
               }
               lastAssistantText += evt.text;
 
-              // ✅【核心修改 4】：在 Chat 气泡渲染前，全量将文本和链接中的下划线案例号洗成斜杠
               let processedChatText = lastAssistantText.replace(/(\b\d{2,4})_(\d{3,5})_([A-Z0-9]+\b)/ig, '$1/$2/$3');
               textContainer.innerHTML = marked.parse(processedChatText);
               chatEl.scrollTop = chatEl.scrollHeight;
 
-              // 同步打字到证据树的底部节点
-              document.getElementById('conclusion-node').innerHTML = marked.parse(processedChatText);
-            } 
+              // ❌ 删掉这行：document.getElementById('conclusion-node').innerHTML = marked.parse(processedChatText);
+            }
             
             // 2. 接收到底层 Agent 的原始数据 (在这里进行文本切割，生成碎片节点)
+            // 2. 接收到底层 Agent 的原始数据 (转化为关联节点图)
             else if (evt.type === "evidence") {
-              const policyHtmlArray = splitIntoNodes(evt.data.policy, "policy");
-              const caseHtmlArray = splitIntoNodes(evt.data.cases, "case");
-
-              document.getElementById('policy-nodes').innerHTML = policyHtmlArray.length > 0 
-                ? policyHtmlArray.join('') 
-                : '<div class="empty-node">No specific policy rules extracted.</div>';
-
-              document.getElementById('case-nodes').innerHTML = caseHtmlArray.length > 0 
-                ? caseHtmlArray.join('') 
-                : '<div class="empty-node">No precedent cases found.</div>';
+              // 构建节点并渲染
+              const graphData = buildGraphData(evt.data.policy, evt.data.cases);
+              
+              if (graphData.nodes.length > 1) {
+                renderNetwork(graphData);
+              } else {
+                document.getElementById('evidence-network').innerHTML = '<div class="empty-node" style="text-align: center; margin-top: 40px;">No evidence extracted.</div>';
+              }
             }
             // 3. 接收到地图数据
             else if (evt.type === "map") {
@@ -813,8 +1007,8 @@
       const dateTo = document.getElementById("dateTo").value;
       const distanceFilter = document.getElementById("distanceFilter").value;
       
-      // 1. 自动帮用户切换到地图 Tab 面板
-      switchTab('map-view');
+      // 1. 自动帮用户切换到地图 Tab 面板s
+      //switchTab('map-view');
       
       // 2. 按钮加载动画
       const btn = document.getElementById("directMapBtn");
@@ -883,13 +1077,13 @@
       <div class="welcome-sub">I'm your AI planning assistant. I can navigate local policies and find nearby approved projects.</div>
       <div class="suggestion-grid">
         <a href="#" class="suggestion-card" data-example="Are there any nearby applications for roof extensions? What does the local policy say about it?">
-          <span class="icon">🏡</span><span class="text">Find roof extension precedents</span>
+          </span><span class="text">Find roof extension precedents</span>
         </a>
         <a href="#" class="suggestion-card" data-example="What is the local policy on carbon reduction targets, and are there recent approved examples?">
-          <span class="icon">🌱</span><span class="text">Explain carbon reduction policy</span>
+          </span><span class="text">Explain carbon reduction policy</span>
         </a>
         <a href="#" class="suggestion-card" data-example="Show me all applications related to basement excavations within a 0.5-mile radius.">
-          <span class="icon">📊</span><span class="text">Find nearby basement cases</span>
+          </span><span class="text">Find nearby basement cases</span>
         </a>
       </div>
       `, { html: true });
@@ -931,6 +1125,9 @@
       const { data } = await sb.auth.getSession();
       if (!data.session) { window.location.href = "./index_login.html"; return; }
     })();
+
+    setTimeout(() => { initOrGetMap(); }, 200);
+
   </script>
 </body>
 </html>
