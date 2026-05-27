@@ -17,6 +17,8 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.5/split.min.js"></script>
+
   <style>
     :root {
       --bg: #F8FAFC;         
@@ -55,19 +57,58 @@
 
     /* 修改 .shell 布局为三列仪表盘 */
     /* 修改 .shell 布局，强制三列并排 */
+    /* 修改 .shell 为 Flex 布局，适应 Split.js 拖拽 */
     .shell { 
       width: 100%; 
-      max-width: 100%; /* 彻底放开最大宽度限制，充分利用全屏 */
-      display: grid; 
-      /* 强制三列：左侧边栏250px | 中间聊天室占 1 份比例 | 右侧面板占 1.2 份比例 */
-      grid-template-columns: 250px 1fr 1.2fr; 
-      gap: 20px; 
-      height: 95vh; /* 稍微加高，让视觉更舒展 */
+      max-width: 100%; 
+      display: flex; /* 改为 flex */
+      flex-direction: row;
+      gap: 0; /* 取消原本的 gap，由拖拽条代替 */
+      height: 95vh; 
     }
 
-    /* 将折叠断点极限缩小，现在只有在手机或很小的平板上它才会掉到下面去 */
     @media (max-width: 900px){ 
-      .shell { display: flex; flex-direction: column; height: auto; } 
+      .shell { flex-direction: column; height: auto; } 
+    }
+
+    /* =========================================
+       📏 拖拽分割线 (Gutter) 样式
+       ========================================= */
+    /* 去掉原本写死的 gap 和 flex 比例，交给 Split.js 动态计算 */
+    .right-panel { display: flex; flex-direction: column; height: 100%; min-width: 0; }
+    .map-block { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); overflow: hidden; position: relative; }
+    .er-block { display: flex; flex-direction: column; background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); overflow: hidden; }
+
+    /* =========================================
+       📏 拖拽分割线 (Gutter) 样式
+       ========================================= */
+    .gutter {
+      background-color: transparent;
+      background-repeat: no-repeat;
+      background-position: 50%;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+
+    /* 水平拖拽条 (左右分栏) */
+    .gutter.gutter-horizontal {
+      cursor: col-resize;
+      margin: 0 8px; /* 左右留白 */
+    }
+    .gutter.gutter-horizontal:hover, .gutter.gutter-horizontal.gutter-dragging {
+      background-color: #CBD5E1;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="4" height="20" viewBox="0 0 4 20"><circle cx="2" cy="2" r="2" fill="%239CA3AF"/><circle cx="2" cy="10" r="2" fill="%239CA3AF"/><circle cx="2" cy="18" r="2" fill="%239CA3AF"/></svg>');
+    }
+
+    /* ✅ 新增：垂直拖拽条 (上下分栏) */
+    .gutter.gutter-vertical {
+      cursor: row-resize;
+      margin: 8px 0; /* 上下留白 */
+    }
+    .gutter.gutter-vertical:hover, .gutter.gutter-vertical.gutter-dragging {
+      background-color: #CBD5E1;
+      /* 横向的三个小圆点 */
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="4" viewBox="0 0 20 4"><circle cx="2" cy="2" r="2" fill="%239CA3AF"/><circle cx="10" cy="2" r="2" fill="%239CA3AF"/><circle cx="18" cy="2" r="2" fill="%239CA3AF"/></svg>');
     }
 
     .sidebar { display: flex; flex-direction: column; gap: 16px; max-height: 85vh; overflow-y: auto; padding-right: 4px; }
@@ -178,14 +219,15 @@
     /* --- 核心容器修改 --- */
     .main { display: flex; flex-direction: column; height: 100%; box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); background: #ffffff; border: 1px solid var(--border); overflow: hidden;}
     
-    .right-panel { display: flex; flex-direction: column; gap: 24px; height: 100%; min-width: 0; }
+    /* ✅ 替换后的正确代码：交给 Split.js 动态计算宽高 */
+    .right-panel { display: flex; flex-direction: column; gap: 0; height: 100%; min-width: 0; }
     
     /* 地图 Block */
-    .map-block { flex: 1; background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); overflow: hidden; position: relative; min-height: 250px; }
+    .map-block { background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); overflow: hidden; position: relative; }
     
     /* Evidence & Reference 混合 Block */
-    .er-block { flex: 1.5; display: flex; flex-direction: column; background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); overflow: hidden; min-height: 0; }
-    
+    .er-block { display: flex; flex-direction: column; background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); overflow: hidden; }
+
     /* 混合 Block 内部的 Tab 导航 */
     .er-tabs { display: flex; border-bottom: 1px solid var(--border); background: #F8FAFC; }
     .er-tab-btn { flex: 1; padding: 12px; font-size: 13px; font-weight: 600; color: var(--muted); background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
@@ -328,7 +370,7 @@
 
 <body>
   <div class="shell">
-    <div class="sidebar">
+    <div class="sidebar" id="panel-1">
       <div class="card">
         <div class="brand">
           <img src="logo.png" class="logo" alt="Plannos logo" onerror="this.style.display='none'" />
@@ -392,7 +434,7 @@
       </div>
     </div>
 
-    <div class="main">
+    <div class="main" id="panel-2">
       <div class="toolbar">
         <div style="font-weight: 700; color: #0F172A; font-size: 15px; padding-left: 8px;">Chat Assistant</div>
         <div class="actions">
@@ -414,13 +456,13 @@
       </div>
     </div>
 
-    <div class="right-panel">
+    <div class="right-panel" id="panel-3">
       
-      <div class="map-block">
+      <div class="map-block" id="map-block">
         <div id="global-map" class="full-map"></div>
       </div>
 
-      <div class="er-block">
+      <div class="er-block" id="er-block">
         <div class="er-tabs">
           <button class="er-tab-btn active" data-target="graph-view">Evidence Tree</button>
           <button class="er-tab-btn" data-target="reference-view">Source References</button>
@@ -1126,7 +1168,32 @@
       if (!data.session) { window.location.href = "./index_login.html"; return; }
     })();
 
+    // ✅ 页面一加载就初始化常驻地图
     setTimeout(() => { initOrGetMap(); }, 200);
+
+    // 1️⃣ 激活三栏自由拖拽功能 (左右分栏)
+    Split(['#panel-1', '#panel-2', '#panel-3'], {
+      sizes: [18, 40, 42],        // 默认宽度比例
+      minSize: [220, 350, 400],   // 限制极小值，防止拉没了
+      gutterSize: 8,              // 拖拽条宽度
+      onDragEnd: function() {
+        if (sharedMapboxMap) { sharedMapboxMap.resize(); }
+        if (network) { setTimeout(() => { network.fit(); }, 50); }
+      }
+    });
+
+    // 2️⃣ 激活右侧地图与下方证据面板的自由拖拽功能 (上下分栏)
+    Split(['#map-block', '#er-block'], {
+      direction: 'vertical',      // 关键：设置为垂直拉伸
+      sizes: [40, 60],            // 默认地图占 40%，下方占 60%
+      minSize: [150, 200],        // 限制上下缩小的极限值
+      gutterSize: 8,              // 拖拽条高度
+      onDragEnd: function() {
+        // 拉动结束后，让地图和关系图谱自动重绘填满新空间
+        if (sharedMapboxMap) { sharedMapboxMap.resize(); }
+        if (network) { setTimeout(() => { network.fit(); }, 50); }
+      }
+    });
 
   </script>
 </body>
