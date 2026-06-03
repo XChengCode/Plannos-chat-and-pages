@@ -391,6 +391,18 @@
               <label><input type="radio" name="search_mode" value="policy"> <span>Policy</span></label>
               <label><input type="radio" name="search_mode" value="application"> <span>Application</span></label>
             </div>
+
+            <div class="filter-group" id="councilGroup" style="display: none; margin-top: 12px;">
+              <label class="group-title">Target Council</label>
+              <select id="councilSelect">
+                <option value="">-- Select a Council --</option>
+                <option value="City of London">City of London</option>
+                <option value="Portsmouth">Portsmouth</option>
+                <option value="Hertsmere">Hertsmere</option>
+                <option value="Islington">Islington</option>
+              </select>
+            </div>
+            
           </div>
           <div class="filter-group">
             <label class="group-title">📍 Target Postcode</label>
@@ -529,7 +541,7 @@
       }
     });
 
-    const API_BASE = "https://xchengcode--plannos-chat-pages-bot-fastapi-app-dev.modal.run"; 
+    const API_BASE = "https://xchengcode--plannos-chat-pages-bot-v2-fastapi-app-dev.modal.run"; 
 
     const chatEl = document.getElementById("chat");
     const msgEl = document.getElementById("msg");
@@ -544,6 +556,18 @@
     // 🌍 全局地图与 Tab 切换逻辑
     // ==========================================
     let sharedMapboxMap = null;
+
+    // ✅ 新增：监听模式切换，控制 Council 下拉框的显示/隐藏
+    document.querySelectorAll('input[name="search_mode"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const councilGroup = document.getElementById('councilGroup');
+        if (e.target.value === 'policy') {
+          councilGroup.style.display = 'block';
+        } else {
+          councilGroup.style.display = 'none';
+        }
+      });
+    });
 
     function initOrGetMap() {
       if (!sharedMapboxMap) {
@@ -898,14 +922,20 @@
       const dateFrom = document.getElementById("dateFrom").value;
       const dateTo = document.getElementById("dateTo").value;
       const distanceFilter = document.getElementById("distanceFilter").value;
+      const selectedCouncil = document.getElementById("councilSelect").value;
 
       // 把用户发的消息渲染上屏
       addMessage("user", msg);
 
       // ✅ 【核心拦截】：如果左侧没填邮编，不管问什么都直接弹提示并阻断！
-      if (!globalPostcode) {
+      if (selectedMode !== "policy" && !globalPostcode) {
+        // 如果不是 Policy 模式，且没填邮编，拦截！
         addMessage("bot", "> ⚠️ **Missing Information:** Please enter a **Target Postcode** in the left sidebar to continue.", { markdown: true });
-        return; // 直接退出函数，不再往下走，也不向后端发请求
+        return; 
+      } else if (selectedMode === "policy" && !globalPostcode && !selectedCouncil) {
+        // 如果是 Policy 模式，既没填邮编也没选 Council，拦截！
+        addMessage("bot", "> ⚠️ **Missing Information:** Please select a **Target Council** or enter a Postcode to continue.", { markdown: true });
+        return;
       }
 
       const bubble = addMessage("bot", "");
@@ -928,6 +958,7 @@
             mode: selectedMode,
             nearby_count: selectedNearbyCount,
             postcode: globalPostcode,
+            council: selectedCouncil, // <--- 新增这行
             date_from: dateFrom,
             date_to: dateTo,
             distance_filter: distanceFilter 
