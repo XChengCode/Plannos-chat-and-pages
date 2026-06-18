@@ -40,6 +40,14 @@
       
       --sans: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
+
+    /* =========================================
+       ✨ 全局美化滚动条
+       ========================================= */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+    ::-webkit-scrollbar-thumb:hover { background-color: #94A3B8; }
     
     * { box-sizing: border-box; }
     
@@ -115,7 +123,8 @@
     .sidebar::-webkit-scrollbar { width: 4px; }
     .sidebar::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
 
-    .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); overflow: hidden; flex-shrink: 0; }
+    .card { background: var(--panel); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: var(--radius-lg); box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05); overflow: hidden; flex-shrink: 0; transition: box-shadow 0.3s ease, transform 0.3s ease; }
+    .card:hover { box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08); }
 
     .brand { display: flex; align-items: center; gap: 14px; padding: 20px 24px; border-bottom: 1px solid var(--border); background: #ffffff; }
     .logo { width: 40px; height: 40px; object-fit: contain; border-radius: 10px; background: var(--accent-light); padding: 8px; }
@@ -130,10 +139,12 @@
     .filter-group label.group-title { font-size: 12px; font-weight: 600; color: #4B5563; margin-bottom: 8px; display: block; }
     
     .filter-group select, .filter-group input[type="text"], .filter-group input[type="date"] { 
-      width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); 
-      font-family: var(--sans); font-size: 13px; color: #111827; background: #F8FAFC; outline: none; transition: border-color 0.2s; 
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); 
+      font-family: var(--sans); font-size: 13.5px; color: #111827; background: #F8FAFC; outline: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
     }
-    .filter-group select:focus, .filter-group input[type="text"]:focus, .filter-group input[type="date"]:focus { border-color: #111827; background: #ffffff; }
+    .filter-group select:focus, .filter-group input[type="text"]:focus, .filter-group input[type="date"]:focus { 
+      border-color: #94A3B8; background: #ffffff; box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.05); 
+    }
     .filter-group input::placeholder { color: #9CA3AF; }
 
     .sidebar-mode-selector { display: flex; flex-direction: column; gap: 8px; }
@@ -155,6 +166,7 @@
     
     .actions button { appearance: none; border: 1px solid var(--border); background: #ffffff; color: #374151; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s ease; box-shadow: var(--shadow-sm); }
     .actions button:hover { background: #F9FAFB; border-color: #D1D5DB; }
+    .actions button:active { transform: scale(0.96); }
 
     .chat { padding: 24px; flex: 1; min-height: 0; overflow-y: auto; scroll-behavior: smooth; background: #ffffff; }
 
@@ -162,14 +174,19 @@
     .row.user { justify-content: flex-end; }
     .row.bot { justify-content: flex-start; }
 
-    .bubble { max-width: min(780px, 90%); padding: 16px 20px; border-radius: var(--radius-lg); line-height: 1.6; font-size: 14.5px; }
-    .user .bubble { background: #F3F4F6; color: #111827; border-bottom-right-radius: 4px; }
-    .bot .bubble { background: #ffffff; color: #1F2937; }
+     /* 聊天气泡质感升级 */
+    .bubble { max-width: min(780px, 90%); padding: 18px 22px; border-radius: 20px; line-height: 1.65; font-size: 14.5px; box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.04); transition: transform 0.2s ease; letter-spacing: 0.01em; }
+    /* 用户气泡：右下角直角，柔和背景 */
+    .user .bubble { background: #F1F5F9; color: #0F172A; border-bottom-right-radius: 4px; border: 1px solid #E2E8F0; }
+    /* Bot 气泡：左下角直角，带微阴影 */
+    .bot .bubble { background: #ffffff; color: #1F2937; border-bottom-left-radius: 4px; border: 1px solid rgba(226, 232, 240, 0.6); }
 
     .composer-container { padding: 16px 24px 20px 24px; background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #ffffff 20%); }
 
-    .composer { position: relative; display: flex; align-items: flex-end; background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: box-shadow 0.2s ease, border-color 0.2s ease; }
-    .composer:focus-within { border-color: #93C5FD; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08); }
+    /* 输入框容器变为胶囊状并增加弥散阴影 */
+    .composer { position: relative; display: flex; align-items: flex-end; background: #ffffff; border: 1px solid var(--border); border-radius: 24px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    /* 聚焦时不仅变色，还会轻微上浮 */
+    .composer:focus-within { border-color: #CBD5E1; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08); transform: translateY(-1px); }
 
     textarea { flex: 1; resize: none; height: 54px !important; min-height: 54px !important; max-height: 150px !important; padding: 16px 54px 16px 20px; background: transparent; border: none; outline: none; font-size: 15px; line-height: 1.5; font-family: var(--sans); color: #111827; }
     textarea::placeholder { color: #9CA3AF; }
@@ -178,6 +195,7 @@
     .send svg { width: 16px; height: 16px; fill: currentColor; }
     .send:hover:not(:disabled) { background: var(--accent-hover); transform: scale(1.05); }
     .send:disabled { background: #D1D5DB; cursor: not-allowed; transform: none; }
+    .send:active:not(:disabled) { transform: scale(0.92); }
 
     .statusText { font-size: 12px; color: #9CA3AF; text-align: center; margin-top: 10px; }
 
@@ -295,6 +313,8 @@
     /* 区分不同类型的顶部高亮条 */
     .e-node.policy { border-top: 4px solid #3B82F6; }
     .e-node.case { border-top: 4px solid #10B981; }
+    .e-node.building-reg { border-top: 4px solid #F59E0B; }
+    .e-node.global { border-top: 4px solid #8B5CF6; } /* 💜 紫色代表宏观政策 */
     .e-node.conclusion { border-top: 4px solid #8B5CF6; width: 100%; max-width: 800px; font-size: 14.5px; }
     
     .e-node h3 { margin-top: 0; font-size: 14px; color: #0F172A; }
@@ -365,6 +385,25 @@
     .close-detail-btn:hover { background: #E2E8F0; color: #0F172A; }
     #node-detail-panel .e-node { width: 100%; box-shadow: none; border: none; padding: 20px; border-radius: 0; }
 
+    /* =========================================
+       ✨ 空状态呼吸灯动画
+       ========================================= */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100%; min-height: 200px; color: #94A3B8; font-size: 14px; font-weight: 500;
+      border: 1px dashed #CBD5E1; border-radius: 12px; margin: 24px;
+      transition: all 0.3s ease;
+    }
+    .empty-state.loading {
+      animation: pulse-breath 2s infinite ease-in-out;
+      border-color: transparent;
+      background: rgba(241, 245, 249, 0.5);
+    }
+    @keyframes pulse-breath {
+      0%, 100% { opacity: 0.5; transform: scale(0.99); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
   </style>
 </head>
 
@@ -389,17 +428,32 @@
             <div class="sidebar-mode-selector">
               <label><input type="radio" name="search_mode" value="comprehensive" checked> <span>Comprehensive</span></label>
               <label><input type="radio" name="search_mode" value="policy"> <span>Policy</span></label>
+              <label><input type="radio" name="search_mode" value="building_regulation"> <span>Building Regulation</span></label>
               <label><input type="radio" name="search_mode" value="application"> <span>Application</span></label>
             </div>
 
             <div class="filter-group" id="councilGroup" style="display: none; margin-top: 12px;">
               <label class="group-title">Target Council</label>
               <select id="councilSelect">
-                <option value="">-- Select a Council --</option>
-                <option value="City of London">City of London</option>
-                <option value="Portsmouth">Portsmouth</option>
-                <option value="Hertsmere">Hertsmere</option>
-                <option value="Islington">Islington</option>
+                <option value="">-- Select a Policy Type --</option>
+  
+                <optgroup label="National & Global">
+                  <option value="England">England</option>
+                  <option value="GLA">GLA</option>
+                </optgroup>
+                                
+                <optgroup label="Specific Councils">
+                  <option value="Camden">Camden</option>
+                  <option value="City of London">City of London</option>
+                  <option value="Hackney">Hackney</option>
+                  <option value="Harrow">Harrow</option>
+                  <option value="Hertsmere">Hertsmere</option>
+                  <option value="Islington">Islington</option>
+                  <option value="Lambeth">Lambeth</option>
+                  <option value="Plymouth">Plymouth</option>
+                  <option value="Southwark">Southwark</option>
+                  <option value="Tower Hamlets">Tower Hamlets</option>
+                </optgroup>
               </select>
             </div>
             
@@ -558,13 +612,36 @@
     let sharedMapboxMap = null;
 
     // ✅ 新增：监听模式切换，控制 Council 下拉框的显示/隐藏
+    // ✅ 监听模式切换，控制 Council 下拉框 和 Evidence Tree 的显示/隐藏
+    // ✅ 监听模式切换，控制 Council 下拉框 和 Evidence Tree 的显示/隐藏
     document.querySelectorAll('input[name="search_mode"]').forEach(radio => {
       radio.addEventListener('change', (e) => {
+        const mode = e.target.value;
         const councilGroup = document.getElementById('councilGroup');
-        if (e.target.value === 'policy') {
+        
+        // 只有 Policy 模式需要选 Council，其他模式隐藏
+        if (mode === 'policy') {
           councilGroup.style.display = 'block';
         } else {
           councilGroup.style.display = 'none';
+        }
+
+        // 控制 Evidence Tree 选项卡的显示/隐藏
+        const graphTabBtn = document.querySelector('.er-tab-btn[data-target="graph-view"]');
+        const refTabBtn = document.querySelector('.er-tab-btn[data-target="reference-view"]');
+        
+        // ✅ Policy, Application 和 Building Regulation 模式下，隐藏证据树
+        if (mode === 'policy' || mode === 'application' || mode === 'building_regulation') {
+          graphTabBtn.style.display = 'none';
+          
+          if (graphTabBtn.classList.contains('active')) {
+             graphTabBtn.classList.remove('active');
+             refTabBtn.classList.add('active');
+             document.getElementById('graph-view').classList.remove('active');
+             document.getElementById('reference-view').classList.add('active');
+          }
+        } else {
+          graphTabBtn.style.display = ''; 
         }
       });
     });
@@ -589,7 +666,7 @@
     let network = null;
 
     // ✅ 解析大模型文本并转化为 Nodes (节点) 和 Edges (连线)
-    function buildGraphData(policyText, caseText) {
+    function buildGraphData(policyText, caseText, brText, globalText) {
       let nodes = [];
       let edges = [];
       let nodeId = 1;
@@ -644,8 +721,10 @@
       }
 
       // 2. 解析 Policy 生成蓝色节点，解析 Case 生成绿色节点
-      parseToNodes(policyText, 'Policy', '#3B82F6');
-      parseToNodes(caseText, 'Case', '#10B981');
+      parseToNodes(policyText, 'Local Policy', '#3B82F6');   // 💙 蓝：地方政策
+      parseToNodes(globalText, 'Global Policy', '#8B5CF6');  // 💜 紫：GLA/England宏观政策
+      parseToNodes(caseText, 'Case', '#10B981');             // 💚 绿：案例
+      parseToNodes(brText, 'Building Reg', '#F59E0B');       // 🧡 橙：建筑规范
 
       return { nodes, edges };
     }
@@ -680,11 +759,17 @@
           }
 
           // 找出被点击的节点数据
+          // 找出被点击的节点数据
+          // 找出被点击的节点数据
           const clickedNode = data.nodes.find(n => n.id === clickedNodeId);
           if (clickedNode && clickedNode.markdownText) {
             
-            // 动态决定卡片顶部的颜色条：Policy 是蓝色，Case 是绿色
-            const typeClass = clickedNode.nodeType === 'Policy' ? 'policy' : 'case';
+            // ✅ 动态决定卡片顶部的颜色条：Policy 是蓝色，Case 是绿色，Building Reg 是橙色
+            let typeClass = '';
+            if (clickedNode.nodeType === 'Local Policy') typeClass = 'policy';
+            else if (clickedNode.nodeType === 'Global Policy') typeClass = 'global'; // ✅ 加入这一行
+            else if (clickedNode.nodeType === 'Case') typeClass = 'case';
+            else if (clickedNode.nodeType === 'Building Reg') typeClass = 'building-reg';
             
             // 将存好的 Markdown 文本渲染为我们熟悉的 e-node 卡片
             content.innerHTML = `<div class="e-node ${typeClass}">${marked.parse(clickedNode.markdownText)}</div>`;
@@ -773,13 +858,14 @@
     // ==========================================
     function resetGraph() {
       if (network) { network.destroy(); network = null; }
-      document.getElementById('evidence-network').innerHTML = '<div class="empty-node" style="text-align: center; margin-top: 40px;">Waiting for reasoning graph...</div>';
+      // ✅ 替换为带有 loading 动画的空状态
+      document.getElementById('evidence-network').innerHTML = '<div class="empty-state loading">Reasoning and building graph...</div>';
       
-      // ✅ 隐藏详情弹窗
       const panel = document.getElementById('node-detail-panel');
       if (panel) panel.style.display = 'none';
 
-      document.getElementById('reference-content').innerHTML = '<div class="empty-node" style="text-align: center; padding: 20px;">Waiting for document verification...</div>';
+      // ✅ 替换为带有 loading 动画的空状态
+      document.getElementById('reference-content').innerHTML = '<div class="empty-state loading">Verifying document references...</div>';
     }
 
     function setGraphState(stage) {
@@ -928,12 +1014,11 @@
       addMessage("user", msg);
 
       // ✅ 【核心拦截】：如果左侧没填邮编，不管问什么都直接弹提示并阻断！
-      if (selectedMode !== "policy" && !globalPostcode) {
-        // 如果不是 Policy 模式，且没填邮编，拦截！
+      // ✅ 【核心拦截】：如果是 Building Regulation，直接放行
+      if (selectedMode !== "policy" && selectedMode !== "building_regulation" && !globalPostcode) {
         addMessage("bot", "> ⚠️ **Missing Information:** Please enter a **Target Postcode** in the left sidebar to continue.", { markdown: true });
         return; 
       } else if (selectedMode === "policy" && !globalPostcode && !selectedCouncil) {
-        // 如果是 Policy 模式，既没填邮编也没选 Council，拦截！
         addMessage("bot", "> ⚠️ **Missing Information:** Please select a **Target Council** or enter a Postcode to continue.", { markdown: true });
         return;
       }
@@ -983,17 +1068,20 @@
             if(!p.startsWith("data: ")) continue;
             const evt = JSON.parse(p.slice(6));
             
-        
-            // 1. 接收到主模型打字 (更新底部的 Conclusion 节点)
+            // ✅ 新增：捕捉后端的细颗粒度状态，并展示在气泡的步骤栏里
+            if (evt.type === "status") {
+              updateAgentStatus(bubble, evt.message);
+              chatEl.scrollTop = chatEl.scrollHeight;
+            }
             // 1. 接收到主模型打字
             // 1. 接收到主模型打字
-            if(evt.type === "delta"){
-              if (!deltaStarted) {
-                deltaStarted = true;
-                const activeStep = bubble.querySelector('.agent-steps .step.active');
-                if (activeStep) { updateAgentStatus(bubble, "", true); }
-                // ❌ 删掉这行：document.getElementById('conclusion-node').innerHTML = ""; 
+            else if(evt.type === "delta"){
+              // ✅ 核心修复：不用管是否是第一次打字，只要有文字进来，就把还在转圈的步骤打上绿勾
+              const activeStep = bubble.querySelector('.agent-steps .step.active');
+              if (activeStep) { 
+                 updateAgentStatus(bubble, "", true); 
               }
+              
               lastAssistantText += evt.text;
 
               let processedChatText = lastAssistantText.replace(/(\b\d{2,4})_(\d{3,5})_([A-Z0-9]+\b)/ig, '$1/$2/$3');
@@ -1006,8 +1094,8 @@
             // 2. 接收到底层 Agent 的原始数据 (在这里进行文本切割，生成碎片节点)
             // 2. 接收到底层 Agent 的原始数据 (转化为关联节点图)
             else if (evt.type === "evidence") {
-              // 构建节点并渲染
-              const graphData = buildGraphData(evt.data.policy, evt.data.cases);
+              // ✅ 传入第四个参数：evt.data.global_policy
+              const graphData = buildGraphData(evt.data.policy, evt.data.cases, evt.data.building_regs, evt.data.global_policy);
               
               if (graphData.nodes.length > 1) {
                 renderNetwork(graphData);
@@ -1053,8 +1141,15 @@
               document.getElementById('reference-content').innerHTML = marked.parse(cleanRef);
             }
             // 4. 流程结束
+            // 4. 流程结束
             else if (evt.type === "done") {
               setGraphState('complete');
+              
+              // ✅ 终极兜底：如果整个流都结束了，发现还有没关掉的转圈状态，强行绿勾
+              const activeStep = bubble.querySelector('.agent-steps .step.active');
+              if (activeStep) { 
+                 updateAgentStatus(bubble, "", true); 
+              }
             }
           }
         }
